@@ -97,6 +97,7 @@ export default function ProjectKanbanPage({ params }: { params: Promise<{ projec
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [taskTitle, setTaskTitle] = useState('');
   const [taskDeadline, setTaskDeadline] = useState('');
+  const [taskVolunteerId, setTaskVolunteerId] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Volunteer Dropdown State
