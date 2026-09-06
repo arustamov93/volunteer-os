@@ -163,13 +163,20 @@ export async function POST(
     ] : undefined;
 
     let successCount = 0;
-    const sendPromises = volunteers.map(async (v) => {
-      if (!v.telegramId) return;
-      const ok = await sendTelegramMessage(Number(v.telegramId), textToSend, keyboard, 'Markdown', attachment);
-      if (ok) successCount++;
-    });
-
-    await Promise.all(sendPromises);
+    const BATCH_SIZE = 25;
+    for (let i = 0; i < volunteers.length; i += BATCH_SIZE) {
+      const chunk = volunteers.slice(i, i + BATCH_SIZE);
+      await Promise.all(
+        chunk.map(async (v) => {
+          if (!v.telegramId) return;
+          const ok = await sendTelegramMessage(Number(v.telegramId), textToSend, keyboard, 'Markdown', attachment);
+          if (ok) successCount++;
+        })
+      );
+      if (i + BATCH_SIZE < volunteers.length) {
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      }
+    }
 
     return NextResponse.json({
       success: true,

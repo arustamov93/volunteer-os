@@ -118,22 +118,28 @@ export async function POST(req: NextRequest) {
     }
 
     let successCount = 0;
-
-    const sendPromises = users.map(async (user) => {
-      if (!user.telegramId) return;
-      const success = await sendTelegramMessage(
-        Number(user.telegramId),
-        message || (attachment ? `📎 [Файл: ${attachment.fileName}]` : ''),
-        undefined,
-        'Markdown',
-        attachment
+    const BATCH_SIZE = 25;
+    for (let i = 0; i < users.length; i += BATCH_SIZE) {
+      const chunk = users.slice(i, i + BATCH_SIZE);
+      await Promise.all(
+        chunk.map(async (user) => {
+          if (!user.telegramId) return;
+          const success = await sendTelegramMessage(
+            Number(user.telegramId),
+            message || (attachment ? `📎 [Файл: ${attachment.fileName}]` : ''),
+            undefined,
+            'Markdown',
+            attachment
+          );
+          if (success) {
+            successCount++;
+          }
+        })
       );
-      if (success) {
-        successCount++;
+      if (i + BATCH_SIZE < users.length) {
+        await new Promise((resolve) => setTimeout(resolve, 50));
       }
-    });
-
-    await Promise.all(sendPromises);
+    }
 
     return NextResponse.json({
       success: true,
