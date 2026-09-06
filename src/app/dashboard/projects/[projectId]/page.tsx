@@ -308,10 +308,10 @@ export default function ProjectKanbanPage({ params }: { params: Promise<{ projec
         allPartnersRes.json()
       ]);
 
-      const matchedProj = projectsData.find((p: any) => p.id === projectId);
+      const matchedProj = Array.isArray(projectsData) ? projectsData.find((p: any) => p.id === projectId) : null;
       setProject(matchedProj || null);
-      setTasks(tasksData);
-      setVolunteers(usersData);
+      setTasks(Array.isArray(tasksData) ? tasksData : []);
+      setVolunteers(Array.isArray(usersData) ? usersData : Array.isArray(usersData?.users) ? usersData.users : []);
       
       setProjectPartners(Array.isArray(projPartnersData) ? projPartnersData : []);
       setAvailablePartners(Array.isArray(allPartnersData) ? allPartnersData : []);
@@ -472,7 +472,7 @@ export default function ProjectKanbanPage({ params }: { params: Promise<{ projec
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           project_id: projectId,
-          title: taskTitle,
+          title: taskTitle.trim(),
           assigned_to: taskVolunteerId || null,
           deadline: new Date(taskDeadline).toISOString()
         })
@@ -482,13 +482,17 @@ export default function ProjectKanbanPage({ params }: { params: Promise<{ projec
         setIsModalOpen(false);
         setTaskTitle('');
         setTaskDeadline('');
-        setIsModalOpen(false);
+        setTaskVolunteerId('');
         setVolunteerSearch('');
         setIsVolunteerDropdownOpen(false);
         fetchData();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || 'Ошибка при создании задачи');
       }
     } catch (err) {
       console.error('Failed to create task', err);
+      alert('Ошибка при создании задачи');
     } finally {
       setIsSubmitting(false);
     }
@@ -598,10 +602,13 @@ export default function ProjectKanbanPage({ params }: { params: Promise<{ projec
   };
 
   // Group tasks by columns matching the database statuses
+  const safeTasks = Array.isArray(tasks) ? tasks : [];
+  const safeVolunteers = Array.isArray(volunteers) ? volunteers : [];
+
   const columns = [
-    { title: 'К исполнению (Входящие)', status: 'pending' as const, tasks: tasks.filter(t => t.status === 'pending') },
-    { title: 'В работе', status: 'accepted' as const, tasks: tasks.filter(t => t.status === 'accepted') },
-    { title: 'Выполнено', status: 'completed' as const, tasks: tasks.filter(t => t.status === 'completed') }
+    { title: 'К исполнению (Входящие)', status: 'pending' as const, tasks: safeTasks.filter(t => t.status === 'pending') },
+    { title: 'В работе', status: 'accepted' as const, tasks: safeTasks.filter(t => t.status === 'accepted') },
+    { title: 'Выполнено', status: 'completed' as const, tasks: safeTasks.filter(t => t.status === 'completed') }
   ];
 
   return (
@@ -776,7 +783,7 @@ export default function ProjectKanbanPage({ params }: { params: Promise<{ projec
               ) : (
                 col.tasks.map((task) => {
                   const deadlineState = getDeadlineState(task);
-                  const volunteer = volunteers.find(v => v.id === task.assigned_to);
+                  const volunteer = safeVolunteers.find(v => v.id === task.assigned_to);
 
                   const cardStyle = {
                     overdue: 'border-red-200 bg-red-50/20 hover:border-red-300',
@@ -998,7 +1005,7 @@ export default function ProjectKanbanPage({ params }: { params: Promise<{ projec
                 >
                   <span className="truncate">
                     {taskVolunteerId 
-                      ? volunteers.find(v => v.id === taskVolunteerId)?.full_name || 'Волонтер выбран'
+                      ? safeVolunteers.find(v => v.id === taskVolunteerId)?.full_name || 'Волонтер выбран'
                       : '-- Оставить неназначенной --'}
                   </span>
                   <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
@@ -1027,8 +1034,8 @@ export default function ProjectKanbanPage({ params }: { params: Promise<{ projec
                         -- Оставить неназначенной --
                         {!taskVolunteerId && <Check className="w-3.5 h-3.5" />}
                       </div>
-                      {volunteers
-                        .filter(v => v.full_name.toLowerCase().includes(volunteerSearch.toLowerCase()))
+                      {safeVolunteers
+                        .filter(v => (v.full_name || '').toLowerCase().includes(volunteerSearch.toLowerCase()))
                         .map(v => (
                         <div 
                           key={v.id}
@@ -1042,7 +1049,7 @@ export default function ProjectKanbanPage({ params }: { params: Promise<{ projec
                           {taskVolunteerId === v.id && <Check className="w-3.5 h-3.5" />}
                         </div>
                       ))}
-                      {volunteers.filter(v => v.full_name.toLowerCase().includes(volunteerSearch.toLowerCase())).length === 0 && (
+                      {safeVolunteers.filter(v => (v.full_name || '').toLowerCase().includes(volunteerSearch.toLowerCase())).length === 0 && (
                         <div className="px-3 py-4 text-xs text-center text-slate-500">
                           Волонтер не найден
                         </div>
