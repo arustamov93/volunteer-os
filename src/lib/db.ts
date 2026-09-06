@@ -1098,13 +1098,38 @@ class PrismaDBAdapter {
         if (updates.title !== undefined) data.title = updates.title;
         if (updates.description !== undefined) data.description = updates.description;
         if (updates.status !== undefined) data.status = updates.status;
-        if (updates.start_date !== undefined) data.startDate = updates.start_date ? new Date(updates.start_date) : null;
-        if (updates.end_date !== undefined) data.endDate = updates.end_date ? new Date(updates.end_date) : null;
-        if (updates.org_id !== undefined) data.orgId = updates.org_id;
-        if (updates.coordinator_id !== undefined) data.coordinatorId = updates.coordinator_id || null;
+        
+        if (updates.start_date !== undefined) {
+          data.startDate = updates.start_date ? new Date(updates.start_date) : null;
+        } else if ((updates as any).startDate !== undefined) {
+          data.startDate = (updates as any).startDate ? new Date((updates as any).startDate) : null;
+        }
+
+        if (updates.end_date !== undefined) {
+          data.endDate = updates.end_date ? new Date(updates.end_date) : null;
+        } else if ((updates as any).endDate !== undefined) {
+          data.endDate = (updates as any).endDate ? new Date((updates as any).endDate) : null;
+        }
+
+        if (updates.org_id !== undefined) {
+          data.orgId = updates.org_id;
+        } else if ((updates as any).orgId !== undefined) {
+          data.orgId = (updates as any).orgId;
+        }
+
+        if (updates.coordinator_id !== undefined) {
+          data.coordinatorId = updates.coordinator_id || null;
+        } else if ((updates as any).coordinatorId !== undefined) {
+          data.coordinatorId = (updates as any).coordinatorId || null;
+        }
+
         if (updates.latitude !== undefined) data.latitude = updates.latitude;
         if (updates.longitude !== undefined) data.longitude = updates.longitude;
-        if (updates.allowed_radius_km !== undefined) data.allowedRadiusKm = updates.allowed_radius_km;
+        if (updates.allowed_radius_km !== undefined) {
+          data.allowedRadiusKm = updates.allowed_radius_km;
+        } else if ((updates as any).allowedRadiusKm !== undefined) {
+          data.allowedRadiusKm = (updates as any).allowedRadiusKm;
+        }
 
         const updated = await prisma.project.update({ where: { id }, data });
         return mapProject(updated);
@@ -1112,7 +1137,26 @@ class PrismaDBAdapter {
       (data) => {
         const index = (data.projects || []).findIndex((p: any) => p.id === id);
         if (index !== -1) {
-          data.projects[index] = { ...data.projects[index], ...updates };
+          const prev = data.projects[index];
+          const newStartDate = updates.start_date !== undefined 
+            ? updates.start_date 
+            : (updates as any).startDate !== undefined 
+              ? (updates as any).startDate 
+              : prev.start_date;
+          const newEndDate = updates.end_date !== undefined 
+            ? updates.end_date 
+            : (updates as any).endDate !== undefined 
+              ? (updates as any).endDate 
+              : prev.end_date;
+
+          data.projects[index] = { 
+            ...prev, 
+            ...updates,
+            start_date: newStartDate,
+            startDate: newStartDate,
+            end_date: newEndDate,
+            endDate: newEndDate
+          };
           saveFallbackData(data);
           return mapProject(data.projects[index]);
         }

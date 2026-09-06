@@ -44,6 +44,8 @@ interface Task {
 interface Project {
   id: string;
   title: string;
+  start_date?: string | null;
+  end_date?: string | null;
 }
 
 interface User {

@@ -15,7 +15,8 @@ import {
   Users,
   X,
   Building2,
-  Trash2
+  Trash2,
+  Pencil
 } from 'lucide-react';
 import { useApi } from '@/lib/useApi';
 import { useSWRConfig } from 'swr';
@@ -51,6 +52,17 @@ interface Task {
   status: string;
 }
 
+function toDateInputValue(dateStr?: string | null): string {
+  if (!dateStr) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return '';
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 export default function ProjectsPage() {
   const { mutate } = useSWRConfig();
   
@@ -80,6 +92,61 @@ export default function ProjectsPage() {
   const [longitude, setLongitude] = useState<string>('');
   const [allowedRadiusKm, setAllowedRadiusKm] = useState<string>('0.5');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Edit Project State
+  const [editingProject, setEditingProject] = useState<Project | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [editOrgId, setEditOrgId] = useState('');
+  const [editStatus, setEditStatus] = useState<'planning' | 'active' | 'completed'>('planning');
+  const [editStartDate, setEditStartDate] = useState('');
+  const [editEndDate, setEditEndDate] = useState('');
+  const [isEditSubmitting, setIsEditSubmitting] = useState(false);
+
+  function openEditModal(proj: Project) {
+    setEditingProject(proj);
+    setEditTitle(proj.title || '');
+    setEditDescription(proj.description || '');
+    setEditOrgId(proj.org_id || '');
+    setEditStatus(proj.status || 'planning');
+    setEditStartDate(toDateInputValue(proj.start_date));
+    setEditEndDate(toDateInputValue(proj.end_date));
+  }
+
+  async function handleUpdateProject(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingProject || !editTitle.trim()) return;
+    setIsEditSubmitting(true);
+
+    try {
+      const res = await fetch('/api/projects', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projectId: editingProject.id,
+          title: editTitle.trim(),
+          description: editDescription.trim(),
+          org_id: editOrgId || null,
+          status: editStatus,
+          start_date: editStartDate ? new Date(editStartDate).toISOString() : null,
+          end_date: editEndDate ? new Date(editEndDate).toISOString() : null,
+        })
+      });
+
+      if (res.ok) {
+        setEditingProject(null);
+        mutate('/api/projects');
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert(err.error || 'Ошибка при сохранении проекта');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Ошибка при сохранении проекта');
+    } finally {
+      setIsEditSubmitting(false);
+    }
+  }
 
   // Coordinator assignment
   const [assigningProjectId, setAssigningProjectId] = useState<string | null>(null);
@@ -342,6 +409,16 @@ export default function ProjectsPage() {
                         <IconComponent className="w-3.5 h-3.5" />
                         {statusText[proj.status]}
                       </span>
+                    )}
+
+                    {['admin', 'manager'].includes(role) && (
+                      <button
+                        onClick={() => openEditModal(proj)}
+                        className="p-1 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all cursor-pointer"
+                        title="Редактировать проект и даты"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
                     )}
 
                     {role === 'admin' && (
@@ -645,6 +722,132 @@ export default function ProjectsPage() {
                   className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition-all disabled:opacity-50"
                 >
                   {isSubmitting ? 'Создание...' : 'Создать проект'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Project Modal */}
+      {editingProject && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="w-full max-w-md bg-white border border-slate-200 rounded-2xl p-6 shadow-xl space-y-5">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
+                  <Pencil className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">Редактировать проект</h3>
+                  <p className="text-[10px] text-slate-500">Изменение названия, описания и дат проекта</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingProject(null)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            
+            <form onSubmit={handleUpdateProject} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs text-slate-600 font-semibold block">Название проекта</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Введите название инициативы"
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-950 text-xs placeholder:text-slate-400 focus:ring-1 focus:ring-slate-900 focus:border-slate-900 outline-none"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs text-slate-600 font-semibold block">Описание проекта</label>
+                <textarea
+                  placeholder="Опишите цели и задачи проекта"
+                  rows={3}
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-950 text-xs placeholder:text-slate-400 focus:ring-1 focus:ring-slate-900 focus:border-slate-900 outline-none resize-none"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs text-slate-600 font-semibold block flex items-center gap-1.5">
+                  <Building2 className="w-3.5 h-3.5 text-slate-500" />
+                  Привязать к организации (опционально)
+                </label>
+                <select
+                  value={editOrgId}
+                  onChange={(e) => setEditOrgId(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-950 text-xs focus:ring-1 focus:ring-slate-900 focus:border-slate-900 outline-none cursor-pointer"
+                >
+                  <option value="">— Без организации —</option>
+                  {organizations.map(o => (
+                    <option key={o.id} value={o.id}>{o.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs text-slate-600 font-semibold block">Статус проекта</label>
+                <select
+                  value={editStatus}
+                  onChange={(e) => setEditStatus(e.target.value as any)}
+                  className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-950 text-xs focus:ring-1 focus:ring-slate-900 focus:border-slate-900 outline-none cursor-pointer"
+                >
+                  <option value="planning">⏳ Подготовка</option>
+                  <option value="active">🔵 Активен</option>
+                  <option value="completed">✅ Завершен</option>
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-xs text-slate-600 font-semibold block flex items-center gap-1">
+                    <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                    Дата начала
+                  </label>
+                  <input
+                    type="date"
+                    value={editStartDate}
+                    onChange={(e) => setEditStartDate(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-950 text-xs focus:ring-1 focus:ring-slate-900 focus:border-slate-900 outline-none cursor-pointer"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs text-slate-600 font-semibold block flex items-center gap-1">
+                    <Clock className="w-3.5 h-3.5 text-slate-400" />
+                    Дата завершения
+                  </label>
+                  <input
+                    type="date"
+                    value={editEndDate}
+                    onChange={(e) => setEditEndDate(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-950 text-xs focus:ring-1 focus:ring-slate-900 focus:border-slate-900 outline-none cursor-pointer"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setEditingProject(null)}
+                  className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-semibold text-xs hover:bg-slate-50 transition-colors cursor-pointer"
+                >
+                  Отмена
+                </button>
+                <button
+                  type="submit"
+                  disabled={isEditSubmitting}
+                  className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs transition-colors disabled:opacity-50 cursor-pointer shadow-sm"
+                >
+                  {isEditSubmitting ? 'Сохранение...' : 'Сохранить изменения'}
                 </button>
               </div>
             </form>

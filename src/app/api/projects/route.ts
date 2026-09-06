@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// PATCH /api/projects — update project status, coordinator, or location
+// PATCH /api/projects — update project details, dates, status, coordinator, or location
 export async function PATCH(req: NextRequest) {
   try {
     const auth = requireSessionRequest(req, ['admin', 'manager', 'coordinator'] as any);
@@ -67,14 +67,20 @@ export async function PATCH(req: NextRequest) {
     const projectId = body.projectId || body.id;
     const coordinatorId = body.coordinatorId !== undefined ? body.coordinatorId : body.coordinator_id;
     const orgId = body.orgId !== undefined ? body.orgId : body.org_id;
-    const { status, latitude, longitude, allowed_radius_km } = body;
+    const { status, latitude, longitude, allowed_radius_km, title, description } = body;
+    const startDate = body.start_date !== undefined ? body.start_date : body.startDate;
+    const endDate = body.end_date !== undefined ? body.end_date : body.endDate;
 
     if (!projectId) {
       return NextResponse.json({ error: 'projectId is required' }, { status: 400 });
     }
 
     const updates: any = {};
+    if (title !== undefined) updates.title = typeof title === 'string' ? title.trim() : title;
+    if (description !== undefined) updates.description = typeof description === 'string' ? description.trim() : description;
     if (status !== undefined) updates.status = status;
+    if (startDate !== undefined) updates.start_date = startDate ? new Date(startDate).toISOString() : null;
+    if (endDate !== undefined) updates.end_date = endDate ? new Date(endDate).toISOString() : null;
     if (coordinatorId !== undefined) updates.coordinator_id = coordinatorId || null;
     if (orgId !== undefined) updates.org_id = orgId || null;
     if (latitude !== undefined) updates.latitude = latitude === null ? null : parseFloat(latitude);

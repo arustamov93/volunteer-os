@@ -21,7 +21,8 @@ import {
   Trash2,
   Search,
   Check,
-  ChevronDown
+  ChevronDown,
+  Pencil
 } from 'lucide-react';
 import RsvpModal from '@/components/RsvpModal';
 
@@ -53,6 +54,17 @@ interface UserProfile {
   role: string;
 }
 
+function toDateInputValue(dateStr?: string | null): string {
+  if (!dateStr) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return '';
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 export default function ProjectKanbanPage({ params }: { params: Promise<{ projectId: string }> }) {
   const { projectId } = use(params);
   const router = useRouter();
@@ -61,6 +73,57 @@ export default function ProjectKanbanPage({ params }: { params: Promise<{ projec
   const [tasks, setTasks] = useState<Task[]>([]);
   const [volunteers, setVolunteers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Edit Project Details & Dates State
+  const [isEditProjectModalOpen, setIsEditProjectModalOpen] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [editStatus, setEditStatus] = useState<'planning' | 'active' | 'completed'>('active');
+  const [editStartDate, setEditStartDate] = useState('');
+  const [editEndDate, setEditEndDate] = useState('');
+  const [isUpdatingProject, setIsUpdatingProject] = useState(false);
+
+  function openEditProjectModal() {
+    if (!project) return;
+    setEditTitle(project.title || '');
+    setEditDescription(project.description || '');
+    setEditStatus(project.status || 'active');
+    setEditStartDate(toDateInputValue(project.start_date));
+    setEditEndDate(toDateInputValue(project.end_date));
+    setIsEditProjectModalOpen(true);
+  }
+
+  async function handleUpdateProjectDetails(e: React.FormEvent) {
+    e.preventDefault();
+    if (!project || !editTitle.trim()) return;
+    setIsUpdatingProject(true);
+    try {
+      const res = await fetch('/api/projects', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projectId: project.id,
+          title: editTitle.trim(),
+          description: editDescription.trim(),
+          status: editStatus,
+          start_date: editStartDate ? new Date(editStartDate).toISOString() : null,
+          end_date: editEndDate ? new Date(editEndDate).toISOString() : null
+        })
+      });
+      if (res.ok) {
+        setIsEditProjectModalOpen(false);
+        fetchData();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert(err.error || 'Ошибка при обновлении проекта');
+      }
+    } catch (e) {
+      console.error('Failed to update project:', e);
+      alert('Ошибка при обновлении проекта');
+    } finally {
+      setIsUpdatingProject(false);
+    }
+  }
 
   // Delete project state
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -594,10 +657,30 @@ export default function ProjectKanbanPage({ params }: { params: Promise<{ projec
             )}
           </div>
           <p className="text-xs text-slate-500 max-w-2xl">{project.description || 'Описание проекта отсутствует.'}</p>
+
+          {/* Project Dates Display */}
+          <div className="flex items-center gap-3 text-xs text-slate-600 pt-1 flex-wrap">
+            <span className="inline-flex items-center gap-1.5 font-medium bg-slate-100/80 px-2.5 py-1 rounded-lg border border-slate-200">
+              <Calendar className="w-3.5 h-3.5 text-slate-500" />
+              <span>Начало: <strong className="text-slate-800">{project.start_date ? new Date(project.start_date).toLocaleDateString('ru-RU') : 'не задано'}</strong></span>
+            </span>
+            <span className="inline-flex items-center gap-1.5 font-medium bg-slate-100/80 px-2.5 py-1 rounded-lg border border-slate-200">
+              <Clock className="w-3.5 h-3.5 text-slate-500" />
+              <span>Окончание: <strong className="text-slate-800">{project.end_date ? new Date(project.end_date).toLocaleDateString('ru-RU') : 'не задано'}</strong></span>
+            </span>
+          </div>
         </div>
         
         {role === 'admin' || role === 'manager' ? (
-          <div className="flex gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={openEditProjectModal}
+              className="px-4 py-2.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all active:scale-95 cursor-pointer"
+              title="Редактировать название, описание и даты проекта"
+            >
+              <Pencil className="w-4 h-4 text-indigo-600" />
+              Редактировать
+            </button>
             {role === 'admin' && (
               <button
                 onClick={() => setIsDeleteModalOpen(true)}
@@ -1244,6 +1327,115 @@ export default function ProjectKanbanPage({ params }: { params: Promise<{ projec
                     className="flex-1 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-all shadow-sm disabled:opacity-50 cursor-pointer"
                   >
                     {isCompletingTask ? 'Сохранение...' : 'Завершить задачу'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Edit Project Modal */}
+        {isEditProjectModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-fade-in">
+            <div className="w-full max-w-md bg-white border border-slate-200 rounded-2xl p-6 shadow-xl space-y-5">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
+                    <Pencil className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900">Редактировать проект</h3>
+                    <p className="text-[10px] text-slate-500">Изменение названия, описания и дат проекта</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsEditProjectModalOpen(false)}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <form onSubmit={handleUpdateProjectDetails} className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs text-slate-600 font-semibold block">Название проекта</label>
+                  <input
+                    type="text"
+                    required
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:ring-1 focus:ring-slate-900 focus:border-slate-900 outline-none"
+                    placeholder="Введите название проекта"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs text-slate-600 font-semibold block">Описание проекта</label>
+                  <textarea
+                    rows={3}
+                    value={editDescription}
+                    onChange={(e) => setEditDescription(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:ring-1 focus:ring-slate-900 focus:border-slate-900 outline-none resize-none"
+                    placeholder="Опишите цели и детали проекта"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs text-slate-600 font-semibold block">Статус проекта</label>
+                  <select
+                    value={editStatus}
+                    onChange={(e) => setEditStatus(e.target.value as any)}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:ring-1 focus:ring-slate-900 focus:border-slate-900 outline-none cursor-pointer"
+                  >
+                    <option value="planning">⏳ Подготовка</option>
+                    <option value="active">🔵 Активен</option>
+                    <option value="completed">✅ Завершен</option>
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <label className="text-xs text-slate-600 font-semibold block flex items-center gap-1">
+                      <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                      Дата начала
+                    </label>
+                    <input
+                      type="date"
+                      value={editStartDate}
+                      onChange={(e) => setEditStartDate(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:ring-1 focus:ring-slate-900 focus:border-slate-900 outline-none cursor-pointer"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs text-slate-600 font-semibold block flex items-center gap-1">
+                      <Clock className="w-3.5 h-3.5 text-slate-400" />
+                      Дата завершения
+                    </label>
+                    <input
+                      type="date"
+                      value={editEndDate}
+                      onChange={(e) => setEditEndDate(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:ring-1 focus:ring-slate-900 focus:border-slate-900 outline-none cursor-pointer"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-2.5 pt-3 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setIsEditProjectModalOpen(false)}
+                    className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-semibold text-xs hover:bg-slate-50 transition-colors cursor-pointer"
+                  >
+                    Отмена
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isUpdatingProject}
+                    className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs transition-colors disabled:opacity-50 cursor-pointer shadow-sm"
+                  >
+                    {isUpdatingProject ? 'Сохранение...' : 'Сохранить изменения'}
                   </button>
                 </div>
               </form>
