@@ -179,13 +179,27 @@ async function sendTelegramAttachmentFile(
   // Attempt 1: Standard send with parseMode
   let attempt = await postFile(true);
 
-  // Attempt 2: If entity parsing error in Markdown, retry without parse_mode
+  // Attempt 2: If rate limited (HTTP 429), respect retry_after and retry
+  if (attempt.status === 429) {
+    let retryAfter = 1;
+    try {
+      const parsed = JSON.parse(attempt.text);
+      if (parsed.parameters?.retry_after) {
+        retryAfter = parsed.parameters.retry_after;
+      }
+    } catch {}
+    console.warn(`[Telegram API] Rate limited (429). Waiting ${retryAfter}s before retrying for TG ID ${telegramId}`);
+    await new Promise((resolve) => setTimeout(resolve, (retryAfter + 0.5) * 1000));
+    attempt = await postFile(true);
+  }
+
+  // Attempt 3: If entity parsing error in Markdown, retry without parse_mode
   if (!attempt.ok && (attempt.text.includes("can't parse entities") || attempt.text.includes('entity'))) {
     console.warn(`[Telegram API] Retrying attachment send without parse_mode for TG ID ${telegramId}`);
     attempt = await postFile(false);
   }
 
-  // Attempt 3: If photo/video failed (e.g. unsupported image format or dimension), fallback to sendDocument
+  // Attempt 4: If photo/video failed (e.g. unsupported image format or dimension), fallback to sendDocument
   if (!attempt.ok && method !== 'sendDocument') {
     console.warn(`[Telegram API] Retrying attachment send via sendDocument for TG ID ${telegramId}`);
     attempt = await postFile(false, true);
@@ -210,7 +224,7 @@ async function sendTelegramAttachmentFile(
 }
 
 /**
- * Helper to send pure text message with Markdown-to-plaintext auto-retry
+ * Helper to send pure text message with Markdown-to-plaintext auto-retry and 429 backoff
  */
 async function sendTelegramTextMessage(
   token: string,
@@ -219,7 +233,7 @@ async function sendTelegramTextMessage(
   replyMarkup?: any,
   parseMode: 'Markdown' | 'HTML' = 'Markdown'
 ): Promise<boolean> {
-  async function postText(useParseMode: boolean): Promise<boolean> {
+  async function postText(useParseMode: boolean, retried429 = false): Promise<boolean> {
     const url = `https://api.telegram.org/bot${token}/sendMessage`;
     const body: any = {
       chat_id: telegramId,
@@ -240,9 +254,24 @@ async function sendTelegramTextMessage(
 
     if (!res.ok) {
       const errText = await res.text();
+
+      // Handle Telegram 429 Rate Limit
+      if (res.status === 429 && !retried429) {
+        let retryAfter = 1;
+        try {
+          const parsed = JSON.parse(errText);
+          if (parsed.parameters?.retry_after) {
+            retryAfter = parsed.parameters.retry_after;
+          }
+        } catch {}
+        console.warn(`[Telegram API] Rate limited (429). Waiting ${retryAfter}s before retrying for TG ID ${telegramId}`);
+        await new Promise((resolve) => setTimeout(resolve, (retryAfter + 0.5) * 1000));
+        return await postText(useParseMode, true);
+      }
+
       if (useParseMode && (errText.includes("can't parse entities") || errText.includes('entity'))) {
         // Retry without parse_mode
-        return await postText(false);
+        return await postText(false, retried429);
       }
       console.error(`[Telegram API Text Error] ${res.status}: ${errText}`);
       return false;

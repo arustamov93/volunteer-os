@@ -652,11 +652,8 @@ export async function handleBotUpdate(
       });
 
       if (!task) {
-        const taskDeadline = project.end_date
-          ? new Date(project.end_date)
-          : project.start_date
-          ? new Date(new Date(project.start_date).getTime() + 7 * 24 * 3600 * 1000)
-          : new Date(Date.now() + 7 * 24 * 3600 * 1000);
+        // Shift deadline: 12 hours from shift start, preventing expired project dates from triggering false alarms
+        const taskDeadline = new Date(Date.now() + 12 * 3600 * 1000);
 
         task = await prisma.task.create({
           data: {

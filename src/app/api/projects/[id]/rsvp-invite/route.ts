@@ -3,6 +3,8 @@ import { db, prisma } from '@/lib/db';
 import { requirePrivilegedRequest, getSessionFromRequest } from '@/lib/security';
 import { sendTelegramMessage, TelegramButton } from '@/lib/telegram-api';
 
+export const maxDuration = 60;
+
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -163,7 +165,7 @@ export async function POST(
     ] : undefined;
 
     let successCount = 0;
-    const BATCH_SIZE = 25;
+    const BATCH_SIZE = 15;
     for (let i = 0; i < volunteers.length; i += BATCH_SIZE) {
       const chunk = volunteers.slice(i, i + BATCH_SIZE);
       await Promise.all(
@@ -174,7 +176,7 @@ export async function POST(
         })
       );
       if (i + BATCH_SIZE < volunteers.length) {
-        await new Promise((resolve) => setTimeout(resolve, 50));
+        await new Promise((resolve) => setTimeout(resolve, 250));
       }
     }
 

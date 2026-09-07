@@ -3,6 +3,8 @@ import { prisma } from '@/lib/db';
 import { requirePrivilegedRequest } from '@/lib/security';
 import { sendTelegramMessage } from '@/lib/telegram-api';
 
+export const maxDuration = 60;
+
 export async function POST(req: NextRequest) {
   try {
     // Check authorization: only admin or manager can broadcast
@@ -118,7 +120,7 @@ export async function POST(req: NextRequest) {
     }
 
     let successCount = 0;
-    const BATCH_SIZE = 25;
+    const BATCH_SIZE = 15;
     for (let i = 0; i < users.length; i += BATCH_SIZE) {
       const chunk = users.slice(i, i + BATCH_SIZE);
       await Promise.all(
@@ -137,7 +139,7 @@ export async function POST(req: NextRequest) {
         })
       );
       if (i + BATCH_SIZE < users.length) {
-        await new Promise((resolve) => setTimeout(resolve, 50));
+        await new Promise((resolve) => setTimeout(resolve, 250));
       }
     }
 

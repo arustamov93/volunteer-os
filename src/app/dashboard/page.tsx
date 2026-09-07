@@ -364,6 +364,7 @@ export default function DashboardPage() {
                   const deadline = new Date(task.deadline);
                   const volunteer = users.find(u => u.id === task.assigned_to);
                   const project = projects.find(p => p.id === task.project_id);
+                  const assigneeName = volunteer?.full_name || (task.title.startsWith('Смена: ') ? task.title.replace('Смена: ', '').trim() : null) || t('dashboard.unassigned_person');
                   const canSendTelegramReminder = !!task.assigned_to && !!volunteer?.telegram_id;
 
                   return (
@@ -377,7 +378,7 @@ export default function DashboardPage() {
                           <h4 className="font-bold text-slate-900 text-xs">{task.title}</h4>
                         </div>
                         <p className="text-[10px] text-slate-500">
-                          {t('dashboard.project')} <span className="font-medium text-slate-700">{project?.title || t('dashboard.unknown')}</span> | {t('dashboard.assignee')} <span className="font-semibold text-slate-700">{volunteer?.full_name || t('dashboard.unassigned_person')}</span>
+                          {t('dashboard.project')} <span className="font-medium text-slate-700">{project?.title || t('dashboard.unknown')}</span> | {t('dashboard.assignee')} <span className="font-semibold text-slate-700">{assigneeName}</span>
                         </p>
                         <p className="text-[10px] text-red-600 font-semibold">
                           {t('dashboard.expired')} {deadline.toLocaleDateString('ru-RU')} в {deadline.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}

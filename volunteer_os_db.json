@@ -9390,7 +9390,7 @@
       "description": "паралимпия и основные игры  ",
       "status": "active",
       "start_date": "2026-08-31T19:00:00.000Z",
-      "end_date": "2026-07-28T19:00:00.000Z",
+      "end_date": "2026-09-30T19:00:00.000Z",
       "org_id": null,
       "created_at": "2026-07-16T02:23:36.976Z",
       "latitude": null,
@@ -10644,8 +10644,8 @@
       "assigned_to": "u_1788009234554_vwgg",
       "title": "Смена: Komilova Shahzoda Javlonbek qizi",
       "deadline": "2026-07-28T19:00:00.000Z",
-      "status": "pending",
-      "is_overdue": true,
+      "status": "completed",
+      "is_overdue": false,
       "created_at": "2026-08-29T09:09:15.018Z"
     },
     {
@@ -10774,8 +10774,8 @@
       "assigned_to": "u_1788014725278_9dri",
       "title": "Смена: Xusanova Ruxshona Sherzod qizi",
       "deadline": "2026-07-28T19:00:00.000Z",
-      "status": "pending",
-      "is_overdue": true,
+      "status": "completed",
+      "is_overdue": false,
       "created_at": "2026-08-29T09:51:22.607Z"
     },
     {
@@ -10874,8 +10874,8 @@
       "assigned_to": "u_1788015204836_7jgr",
       "title": "Смена: Aliyeva Azizabegim Atabekovna",
       "deadline": "2026-07-28T19:00:00.000Z",
-      "status": "accepted",
-      "is_overdue": true,
+      "status": "completed",
+      "is_overdue": false,
       "created_at": "2026-08-29T09:57:32.057Z"
     },
     {
@@ -15974,8 +15974,8 @@
       "assigned_to": "u_1788006192853_hbg6",
       "title": "Смена: Abduraufova Gulbahor Utkirbek qizi",
       "deadline": "2026-07-28T19:00:00.000Z",
-      "status": "pending",
-      "is_overdue": true,
+      "status": "completed",
+      "is_overdue": false,
       "created_at": "2026-08-29T07:32:56.763Z"
     },
     {
@@ -17534,8 +17534,8 @@
       "assigned_to": "u_1788014854493_iv3e",
       "title": "Смена: Sapaxanbayeva Shaxruza Mahmud qizi",
       "deadline": "2026-07-28T19:00:00.000Z",
-      "status": "pending",
-      "is_overdue": true,
+      "status": "completed",
+      "is_overdue": false,
       "created_at": "2026-08-29T10:21:01.881Z"
     },
     {
@@ -20754,8 +20754,8 @@
       "assigned_to": "u_1788175964563_d10v",
       "title": "Смена: Furqatova Gulasal Furqat qizi",
       "deadline": "2026-07-28T19:00:00.000Z",
-      "status": "accepted",
-      "is_overdue": true,
+      "status": "completed",
+      "is_overdue": false,
       "created_at": "2026-09-04T06:38:41.044Z"
     },
     {
@@ -20764,8 +20764,8 @@
       "assigned_to": "u_1787302299475_g0c9",
       "title": "Смена: Begijonov Paxlavon-Mahmud Behzod o`g`li",
       "deadline": "2026-07-28T19:00:00.000Z",
-      "status": "accepted",
-      "is_overdue": true,
+      "status": "completed",
+      "is_overdue": false,
       "created_at": "2026-09-04T06:50:53.128Z"
     },
     {

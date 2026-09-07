@@ -22,7 +22,10 @@ import {
   Search,
   Check,
   ChevronDown,
-  Pencil
+  Pencil,
+  Users2,
+  UserMinus,
+  Phone
 } from 'lucide-react';
 import RsvpModal from '@/components/RsvpModal';
 
@@ -73,6 +76,50 @@ export default function ProjectKanbanPage({ params }: { params: Promise<{ projec
   const [tasks, setTasks] = useState<Task[]>([]);
   const [volunteers, setVolunteers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Project Volunteers State & Search
+  const [projectVolunteers, setProjectVolunteers] = useState<any[]>([]);
+  const [loadingProjectVolunteers, setLoadingProjectVolunteers] = useState(false);
+  const [projectVolunteerSearch, setProjectVolunteerSearch] = useState('');
+  const [volunteerToRemove, setVolunteerToRemove] = useState<any | null>(null);
+  const [isRemovingVolunteer, setIsRemovingVolunteer] = useState(false);
+
+  async function fetchProjectVolunteers() {
+    setLoadingProjectVolunteers(true);
+    try {
+      const res = await fetch(`/api/projects/${projectId}/volunteers`);
+      if (res.ok) {
+        const data = await res.json();
+        setProjectVolunteers(Array.isArray(data.volunteers) ? data.volunteers : []);
+      }
+    } catch (e) {
+      console.error('Failed to load project volunteers', e);
+    } finally {
+      setLoadingProjectVolunteers(false);
+    }
+  }
+
+  async function handleRemoveVolunteerFromProject() {
+    if (!volunteerToRemove) return;
+    setIsRemovingVolunteer(true);
+    try {
+      const res = await fetch(`/api/projects/${projectId}/volunteers?volunteerId=${volunteerToRemove.id}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        setVolunteerToRemove(null);
+        await Promise.all([fetchProjectVolunteers(), fetchData()]);
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert(err.error || 'Ошибка при исключении волонтера из проекта');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Ошибка при исключении волонтера');
+    } finally {
+      setIsRemovingVolunteer(false);
+    }
+  }
 
   // Edit Project Details & Dates State
   const [isEditProjectModalOpen, setIsEditProjectModalOpen] = useState(false);
@@ -326,8 +373,9 @@ export default function ProjectKanbanPage({ params }: { params: Promise<{ projec
         }
       }
 
-      // Load project chat
+      // Load project chat and project volunteers
       fetchProjectChat();
+      fetchProjectVolunteers();
     } catch (e) {
       console.error('Failed to load Kanban board data', e);
     } finally {
@@ -611,6 +659,16 @@ export default function ProjectKanbanPage({ params }: { params: Promise<{ projec
     { title: 'Выполнено', status: 'completed' as const, tasks: safeTasks.filter(t => t.status === 'completed') }
   ];
 
+  const filteredProjectVolunteers = projectVolunteers.filter((v: any) => {
+    if (!projectVolunteerSearch.trim()) return true;
+    const q = projectVolunteerSearch.toLowerCase().trim();
+    return (
+      (v.full_name || '').toLowerCase().includes(q) ||
+      (v.phone || '').toLowerCase().includes(q) ||
+      (v.login || '').toLowerCase().includes(q)
+    );
+  });
+
   return (
     <div className="space-y-6 animate-fade-in pb-12">
       {/* Back button and title */}
@@ -866,6 +924,121 @@ export default function ProjectKanbanPage({ params }: { params: Promise<{ projec
             </div>
           </div>
         ))}
+      </div>
+
+      {/* Project Volunteers Section */}
+      <div className="glass-panel p-6 bg-white border border-slate-200 shadow-sm rounded-xl space-y-4">
+        <div className="border-b border-slate-100 pb-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600">
+              <Users2 className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-slate-900 text-xs tracking-wider uppercase">Волонтёры проекта</h3>
+                <span className="text-[10px] bg-blue-50 text-blue-700 px-2.5 py-0.5 rounded-full border border-blue-200 font-bold">
+                  {projectVolunteers.length} участников
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500">
+                Волонтёры, назначенные на задачи или смены данного проекта
+              </p>
+            </div>
+          </div>
+
+          {/* Live Search Input */}
+          <div className="relative w-full md:w-80">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Поиск по имени, телефону, логину..."
+              value={projectVolunteerSearch}
+              onChange={(e) => setProjectVolunteerSearch(e.target.value)}
+              className="w-full pl-9 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+            />
+            {projectVolunteerSearch && (
+              <button
+                type="button"
+                onClick={() => setProjectVolunteerSearch('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Volunteers Grid */}
+        {loadingProjectVolunteers ? (
+          <div className="py-12 flex justify-center items-center">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-slate-900"></div>
+          </div>
+        ) : filteredProjectVolunteers.length === 0 ? (
+          <div className="py-10 text-center border border-dashed border-slate-200 rounded-xl text-slate-400 text-xs">
+            {projectVolunteerSearch
+              ? `По запросу «${projectVolunteerSearch}» волонтёров в проекте не найдено`
+              : 'К этому проекту пока не привязаны волонтёры'}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[480px] overflow-y-auto pr-1">
+            {filteredProjectVolunteers.map((vol) => (
+              <div
+                key={vol.id}
+                className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/60 hover:bg-slate-50 hover:border-slate-300 transition-all flex items-center justify-between gap-3 shadow-xs"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-full bg-slate-900 text-white font-bold text-xs flex items-center justify-center shrink-0">
+                    {vol.full_name?.charAt(0) || 'В'}
+                  </div>
+                  <div className="min-w-0 space-y-0.5">
+                    <h4 className="font-bold text-slate-900 text-xs truncate leading-snug" title={vol.full_name}>
+                      {vol.full_name}
+                    </h4>
+                    <div className="flex items-center gap-2 text-[10px] text-slate-500">
+                      {vol.phone && (
+                        <span className="flex items-center gap-0.5 truncate">
+                          <Phone className="w-2.5 h-2.5 text-slate-400 shrink-0" />
+                          <span className="truncate">{vol.phone}</span>
+                        </span>
+                      )}
+                      {vol.telegram_id ? (
+                        <span className="text-[9px] bg-blue-50 text-blue-600 px-1.5 py-0.2 rounded font-semibold border border-blue-100 shrink-0">
+                          TG
+                        </span>
+                      ) : (
+                        <span className="text-[9px] text-slate-400 shrink-0">
+                          нет TG
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1.5 text-[9px] text-slate-400 pt-0.5">
+                      <span className="bg-white px-1.5 py-0.5 rounded border border-slate-200 text-slate-600 font-medium">
+                        {vol.tasks_count || 0} задач
+                      </span>
+                      {vol.checkins_count > 0 && (
+                        <span className="bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 text-emerald-700 font-medium">
+                          {vol.checkins_count} смен
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Remove from Project button */}
+                {['admin', 'manager', 'coordinator'].includes(role) && (
+                  <button
+                    type="button"
+                    onClick={() => setVolunteerToRemove(vol)}
+                    className="p-2 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 border border-transparent hover:border-red-200 transition-all shrink-0 cursor-pointer"
+                    title={`Удалить ${vol.full_name} из этого проекта`}
+                  >
+                    <UserMinus className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Project Partners Block */}
@@ -1449,6 +1622,46 @@ export default function ProjectKanbanPage({ params }: { params: Promise<{ projec
             </div>
           </div>
         )}
+
+      {/* Modal Confirm Remove Volunteer From Project */}
+      {volunteerToRemove && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-md w-full p-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-red-100 border border-red-200 flex items-center justify-center text-red-600 shrink-0">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-900 text-base">Исключить из проекта?</h3>
+                <p className="text-xs text-slate-500 mt-0.5">Действие не удаляет аккаунт волонтёра из системы</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-600 leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+              Вы действительно хотите удалить волонтёра <strong>{volunteerToRemove.full_name}</strong> из проекта <strong>{project.title}</strong>? Все его задачи и смены в этом проекте будут сняты.
+            </p>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                disabled={isRemovingVolunteer}
+                onClick={() => setVolunteerToRemove(null)}
+                className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 font-semibold text-xs transition-colors cursor-pointer"
+              >
+                Отмена
+              </button>
+              <button
+                type="button"
+                disabled={isRemovingVolunteer}
+                onClick={handleRemoveVolunteerFromProject}
+                className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold text-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+              >
+                {isRemovingVolunteer ? 'Удаление...' : 'Да, исключить'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

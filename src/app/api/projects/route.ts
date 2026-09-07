@@ -12,6 +12,17 @@ export async function GET(req: NextRequest) {
 
     let projects = await db.getProjects();
 
+    if (auth.session?.role === 'coordinator') {
+      const coordIds = new Set<string>([auth.session.userId]);
+      if (auth.session.login) {
+        const allUsers = await db.getUsers().catch(() => []);
+        allUsers
+          .filter((u: any) => u.login === auth.session.login)
+          .forEach((u: any) => coordIds.add(u.id));
+      }
+      projects = projects.filter(p => p.coordinator_id && coordIds.has(p.coordinator_id));
+    }
+
     if (status) {
       projects = projects.filter(p => p.status === status);
     }

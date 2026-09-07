@@ -34,9 +34,8 @@ export async function GET(req: NextRequest) {
       p.coordinator_id && coordIds.has(p.coordinator_id)
     );
 
-    // If no projects assigned to this coordinator specifically, show ALL projects
-    // (so the coordinator can see what's available)
-    if (myProjects.length === 0) {
+    // If caller is admin/manager and has no specific coordinator projects, allow viewing all
+    if (myProjects.length === 0 && (session.role === 'admin' || session.role === 'manager')) {
       myProjects = allProjects;
     }
 
