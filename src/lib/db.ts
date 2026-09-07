@@ -1271,6 +1271,24 @@ class PrismaDBAdapter {
     );
   }
 
+  async deleteTask(id: string): Promise<void> {
+    await runQuery(
+      async () => {
+        try {
+          await prisma.task.delete({ where: { id } });
+        } catch (e) {
+          console.error('Prisma delete task error:', e);
+        }
+      },
+      (data) => {
+        if (data.tasks) {
+          data.tasks = data.tasks.filter((t: any) => t.id !== id);
+          saveFallbackData(data);
+        }
+      }
+    );
+  }
+
   // Check-Ins
   async getCheckIns(): Promise<CheckIn[]> {
     return runQuery(
@@ -1577,6 +1595,50 @@ class PrismaDBAdapter {
         data.meetings.push(newMeeting);
         saveFallbackData(data);
         return mapMeeting(newMeeting);
+      }
+    );
+  }
+
+  async updateMeeting(id: string, updates: Partial<Meeting>): Promise<Meeting> {
+    return runQuery(
+      async () => {
+        const data: any = {};
+        if (updates.title !== undefined) data.title = updates.title;
+        if (updates.description !== undefined) data.description = updates.description;
+        if (updates.scheduled_at !== undefined) data.scheduledAt = new Date(updates.scheduled_at);
+        if (updates.link !== undefined) data.link = updates.link;
+        if (updates.project_id !== undefined) data.projectId = updates.project_id || null;
+        if (updates.created_by !== undefined) data.createdBy = updates.created_by;
+
+        const updated = await prisma.meeting.update({ where: { id }, data });
+        return mapMeeting(updated);
+      },
+      (data) => {
+        const index = (data.meetings || []).findIndex((m: any) => m.id === id);
+        if (index !== -1) {
+          data.meetings[index] = { ...data.meetings[index], ...updates };
+          saveFallbackData(data);
+          return mapMeeting(data.meetings[index]);
+        }
+        throw new Error('Meeting not found');
+      }
+    );
+  }
+
+  async deleteMeeting(id: string): Promise<void> {
+    await runQuery(
+      async () => {
+        try {
+          await prisma.meeting.delete({ where: { id } });
+        } catch (e) {
+          console.error('Prisma delete meeting error:', e);
+        }
+      },
+      (data) => {
+        if (data.meetings) {
+          data.meetings = data.meetings.filter((m: any) => m.id !== id);
+          saveFallbackData(data);
+        }
       }
     );
   }

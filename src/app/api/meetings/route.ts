@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const auth = requireSessionRequest(req, ['admin', 'manager']);
+    const auth = requireSessionRequest(req, ['admin', 'manager', 'coordinator']);
     if ('response' in auth) return auth.response;
 
     const body = await req.json();
@@ -51,5 +51,70 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error('Failed to create meeting:', error);
     return NextResponse.json({ error: 'Failed to create meeting' }, { status: 500 });
+  }
+}
+
+export async function PATCH(req: NextRequest) {
+  try {
+    const auth = requireSessionRequest(req, ['admin', 'manager', 'coordinator']);
+    if ('response' in auth) return auth.response;
+
+    const { searchParams } = new URL(req.url);
+    const queryId = searchParams.get('id');
+    const body = await req.json();
+    const id = body.id || queryId;
+
+    if (!id) {
+      return NextResponse.json({ error: 'Meeting ID is required' }, { status: 400 });
+    }
+
+    const existing = await db.getMeeting(id);
+    if (!existing) {
+      return NextResponse.json({ error: 'Meeting not found' }, { status: 404 });
+    }
+
+    const updated = await db.updateMeeting(id, {
+      ...(body.title !== undefined && { title: body.title }),
+      ...(body.description !== undefined && { description: body.description }),
+      ...(body.scheduled_at !== undefined && { scheduled_at: body.scheduled_at }),
+      ...(body.link !== undefined && { link: body.link }),
+      ...(body.project_id !== undefined && { project_id: body.project_id || null }),
+    });
+
+    return NextResponse.json(updated);
+  } catch (error) {
+    console.error('Failed to update meeting:', error);
+    return NextResponse.json({ error: 'Failed to update meeting' }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const auth = requireSessionRequest(req, ['admin', 'manager', 'coordinator']);
+    if ('response' in auth) return auth.response;
+
+    const { searchParams } = new URL(req.url);
+    let id = searchParams.get('id');
+    if (!id) {
+      try {
+        const body = await req.json();
+        id = body?.id;
+      } catch {}
+    }
+
+    if (!id) {
+      return NextResponse.json({ error: 'Meeting ID is required' }, { status: 400 });
+    }
+
+    const existing = await db.getMeeting(id);
+    if (!existing) {
+      return NextResponse.json({ error: 'Meeting not found' }, { status: 404 });
+    }
+
+    await db.deleteMeeting(id);
+    return NextResponse.json({ success: true, id });
+  } catch (error) {
+    console.error('Failed to delete meeting:', error);
+    return NextResponse.json({ error: 'Failed to delete meeting' }, { status: 500 });
   }
 }

@@ -74,15 +74,28 @@
     "no_reports_yet": "Hozircha volontyorlardan hisobotlar kelmadi."
   },
   "calendar": {
-    "title": "Tadbirlar Taqvim",
-    "subtitle": "Volontyorlar smenasi jadvali, loyiha muddatlari va tadbirlar",
+    "title": "Ishlar va Uchrashuvlar Taqvimi",
+    "subtitle": "Rahbar ishlari, jamoa vazifalari, uchrashuvlar va loyiha muddatlari yagona jadvali",
     "today": "Bugun",
+    "viewMonth": "Oy",
+    "viewAgenda": "Jadval",
+    "addEvent": "Ish / Uchrashuv qo'shish",
+    "allTypes": "Barcha tadbirlar",
+    "meetingsTab": "Uchrashuvlar",
+    "tasksTab": "Vazifalar va ishlar",
+    "projectsTab": "Loyihalar",
+    "allProjects": "Barcha loyihalar",
+    "statTotal": "Jami ishlar",
+    "statMeetings": "Uchrashuvlar",
+    "statPending": "Jarayonda",
+    "statCompleted": "Bajarildi",
     "jan": "Yanvar", "feb": "Fevral", "mar": "Mart", "apr": "Aprel", "may": "May", "jun": "Iyun",
     "jul": "Iyul", "aug": "Avgust", "sep": "Sentabr", "oct": "Oktabr", "nov": "Noyabr", "dec": "Dekabr",
     "mon": "Dush", "tue": "Sesh", "wed": "Chor", "thu": "Pay", "fri": "Jum", "sat": "Shan", "sun": "Yak",
     "start": "Boshlanishi",
     "end": "Tugashi",
-    "task": "Vazifa"
+    "task": "Vazifa",
+    "meeting": "Uchrashuv"
   },
   "reports": {
     "title": "Hisobotlar va Tahlillar",

@@ -78,3 +78,35 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Failed to create task' }, { status: 500 });
   }
 }
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const auth = requireSessionRequest(req, ['admin', 'manager', 'coordinator']);
+    if ('response' in auth) return auth.response;
+
+    const { searchParams } = new URL(req.url);
+    let id = searchParams.get('id');
+    if (!id) {
+      try {
+        const body = await req.json();
+        id = body?.id;
+      } catch {}
+    }
+
+    if (!id) {
+      return NextResponse.json({ error: 'Task ID is required' }, { status: 400 });
+    }
+
+    const existing = await db.getTask(id);
+    if (!existing) {
+      return NextResponse.json({ error: 'Task not found' }, { status: 404 });
+    }
+
+    await db.deleteTask(id);
+    return NextResponse.json({ success: true, id });
+  } catch (error) {
+    console.error('Failed to delete task:', error);
+    return NextResponse.json({ error: 'Failed to delete task' }, { status: 500 });
+  }
+}
+

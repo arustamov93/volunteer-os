@@ -88,3 +88,23 @@ export async function PATCH(req: NextRequest, segmentData: { params: Params }) {
     return NextResponse.json({ error: 'Failed to update task' }, { status: 500 });
   }
 }
+
+export async function DELETE(req: NextRequest, segmentData: { params: Params }) {
+  try {
+    const auth = requireSessionRequest(req, ['admin', 'manager', 'coordinator']);
+    if ('response' in auth) return auth.response;
+
+    const { id } = await segmentData.params;
+    const task = await db.getTask(id);
+    if (!task) {
+      return NextResponse.json({ error: 'Task not found' }, { status: 404 });
+    }
+
+    await db.deleteTask(id);
+    return NextResponse.json({ success: true, id });
+  } catch (error) {
+    console.error('Failed to delete task:', error);
+    return NextResponse.json({ error: 'Failed to delete task' }, { status: 500 });
+  }
+}
+

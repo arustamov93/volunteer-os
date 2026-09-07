@@ -74,15 +74,28 @@
     "no_reports_yet": "No reports from volunteers yet."
   },
   "calendar": {
-    "title": "Event Calendar",
-    "subtitle": "Volunteer shift schedules, project deadlines and events",
+    "title": "Tasks & Meetings Calendar",
+    "subtitle": "Unified schedule for executive to-dos, team tasks, meetings, and deadlines",
     "today": "Today",
+    "viewMonth": "Month",
+    "viewAgenda": "Schedule",
+    "addEvent": "Add Task / Meeting",
+    "allTypes": "All Events",
+    "meetingsTab": "Meetings & Schedule",
+    "tasksTab": "Tasks & To-Dos",
+    "projectsTab": "Projects",
+    "allProjects": "All Projects",
+    "statTotal": "Total Items",
+    "statMeetings": "Meetings",
+    "statPending": "In Progress",
+    "statCompleted": "Completed",
     "jan": "January", "feb": "February", "mar": "March", "apr": "April", "may": "May", "jun": "June",
     "jul": "July", "aug": "August", "sep": "September", "oct": "October", "nov": "November", "dec": "December",
     "mon": "Mon", "tue": "Tue", "wed": "Wed", "thu": "Thu", "fri": "Fri", "sat": "Sat", "sun": "Sun",
     "start": "Start",
     "end": "End",
-    "task": "Task"
+    "task": "Task",
+    "meeting": "Meeting"
   },
   "reports": {
     "title": "Reports and Analytics",
